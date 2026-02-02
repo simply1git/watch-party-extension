@@ -19,6 +19,14 @@
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.29"
   },
+  "alias": {
+    "socket.io-client": "socket.io-client/dist/socket.io.js",
+    "debug": "debug/src/browser.js",
+    "utf-8-validate": false,
+    "bufferutil": false,
+    "ws": false,
+    "supports-color": false
+  },
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",
@@ -33,7 +41,7 @@
   },
   "manifest": {
     "host_permissions": [
-      "https://*/*"
+      "<all_urls>"
     ],
     "permissions": [
       "storage",

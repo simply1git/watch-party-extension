@@ -42,6 +42,7 @@ body {
   font-size: 20px;
   background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: hue-rotate 10s infinite linear;
   filter: drop-shadow(0 0 5px rgba(129, 140, 248, 0.5));

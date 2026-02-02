@@ -1,4 +1,4 @@
-import { io, Socket } from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 import { CONFIG } from "../config";
 
 interface StreamConfig {
@@ -39,17 +39,6 @@ export class StreamManager {
 
     this.socket = io(CONFIG.SERVER_URL);
     this.setupSocketListeners();
-  }
-
-  public destroy() {
-    this.socket.disconnect();
-    this.peers.forEach(peer => peer.close());
-    this.peers.clear();
-    this.connectedUsers.clear();
-    if (this.localStream) {
-        this.localStream.getTracks().forEach(track => track.stop());
-        this.localStream = null;
-    }
   }
 
   private setupSocketListeners() {
@@ -181,6 +170,7 @@ export class StreamManager {
 
   public destroy() {
     this.stopStream();
+    this.connectedUsers.clear();
     this.socket.disconnect();
   }
 
