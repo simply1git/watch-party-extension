@@ -326,11 +326,14 @@ function IndexPopup() {
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs[0]?.id) {
         // Check for restricted URLs
-        if (tabs[0].url?.startsWith("chrome://") || tabs[0].url?.startsWith("edge://") || tabs[0].url?.startsWith("about:")) {
-            alert("Extension cannot run on this page. Please navigate to a video site (e.g. YouTube).");
-            setCurrentRoom(null);
-            return;
-        }
+         const currentUrl = tabs[0].url || "";
+         console.log("Current Tab URL:", currentUrl);
+
+         if (currentUrl.startsWith("chrome://") || currentUrl.startsWith("edge://") || currentUrl.startsWith("about:")) {
+             alert(`Extension cannot run on this restricted page (${currentUrl}).\nPlease navigate to a video site (e.g. YouTube) and refresh.`);
+             setCurrentRoom(null);
+             return;
+         }
 
         try {
             await chrome.tabs.sendMessage(tabs[0].id, { 
