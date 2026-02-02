@@ -30,18 +30,16 @@ The server uses **Socket.IO**, which requires a hosting provider that supports *
     -   It will run `npm start` (starts the server).
 7.  Once deployed, copy your **Public Domain** (e.g., `https://watch-party-production.up.railway.app`).
 
-### Option B: Deploy to Render
+### Option B: Deploy to Render (Easiest)
 
 1.  Sign up at [render.com](https://render.com/).
-2.  Click **"New +"** -> **"Web Service"**.
-3.  Connect your GitHub repo.
-4.  Configure the service:
-    -   **Root Directory**: `server`
-    -   **Environment**: `Node`
-    -   **Build Command**: `npm install && npm run build`
-    -   **Start Command**: `npm start`
-5.  Click **Create Web Service**.
-6.  Copy the URL (e.g., `https://watch-party.onrender.com`).
+2.  Click **"New +"** -> **"Blueprint"**.
+3.  Connect your GitHub repo (`watch-party-extension`).
+4.  Render will automatically detect the `render.yaml` file and configure everything for you.
+5.  Click **Apply**.
+6.  Copy the URL (e.g., `https://watch-party-server.onrender.com`).
+
+### Option C: Manual Render Setup (If Blueprint fails)
 
 ---
 

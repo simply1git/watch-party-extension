@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: watch-party-server
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build --workspace=@watch-party/server
+    startCommand: npm start --workspace=@watch-party/server
+    envVars:
+      - key: NODE_ENV
+        value: production
