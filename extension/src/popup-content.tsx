@@ -323,29 +323,47 @@ function IndexPopup() {
     setCurrentRoom(roomToJoin)
 
     // Notify content script to join the room
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          type: "JOIN_ROOM", 
-          roomId: roomToJoin,
-          user: { nickname: nickname || "Anonymous", avatar },
-          mode: mode,
-          theme: theme
-        })
+        // Check for restricted URLs
+        if (tabs[0].url?.startsWith("chrome://") || tabs[0].url?.startsWith("edge://") || tabs[0].url?.startsWith("about:")) {
+            alert("Extension cannot run on this page. Please navigate to a video site (e.g. YouTube).");
+            setCurrentRoom(null);
+            return;
+        }
+
+        try {
+            await chrome.tabs.sendMessage(tabs[0].id, { 
+              type: "JOIN_ROOM", 
+              roomId: roomToJoin,
+              user: { nickname: nickname || "Anonymous", avatar },
+              mode: mode,
+              theme: theme
+            })
+        } catch (err) {
+            console.error("Failed to connect to content script:", err);
+            alert("Could not connect to the page. Please REFRESH the page and try again.");
+            setCurrentRoom(null);
+        }
       }
     })
   }
 
   const toggleStream = () => {
     const action = isStreaming ? "STOP_STREAM" : "START_STREAM"
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          type: action, 
-          roomId: currentRoom,
-          user: { nickname: nickname || "Anonymous", avatar }
-        })
-        setIsStreaming(!isStreaming)
+        try {
+            await chrome.tabs.sendMessage(tabs[0].id, { 
+              type: action, 
+              roomId: currentRoom,
+              user: { nickname: nickname || "Anonymous", avatar }
+            })
+            setIsStreaming(!isStreaming)
+        } catch (err) {
+            console.error("Stream toggle failed:", err);
+            alert("Connection lost. Please refresh the page.");
+        }
       }
     })
   }
