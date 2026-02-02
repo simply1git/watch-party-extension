@@ -20,6 +20,7 @@
     "yjs": "^13.6.29"
   },
   "alias": {
+    "process": "./src/process-polyfill.js",
     "socket.io-client": "socket.io-client/dist/socket.io.js",
     "debug": "debug/src/browser.js",
     "utf-8-validate": false,

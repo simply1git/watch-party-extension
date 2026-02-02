@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SOTA Watch Party</title>
+    <meta charset="utf-8">
+    <script>
+      // Critical Polyfills for React/Node compatibility
+      // Must run before any module loading happens
+      if (typeof globalThis === 'undefined') window.globalThis = window;
+      window.process = {
+        env: { 
+            NODE_ENV: 'production',
+            PLASMO_PUBLIC_SERVER_URL: 'https://watch-party-server-7tvy.onrender.com'
+        },
+        version: '',
+        platform: 'browser',
+        nextTick: function(cb) { setTimeout(cb, 0); },
+        cwd: function() { return '/'; }
+      };
+      console.log('Polyfills initialized:', window.process);
+    </script>
+  </head>
+  <body>
+    <div id="__plasmo"></div>
+  </body>
+</html>
