@@ -1,0 +1,21 @@
+{
+  "name": "watch-party-sota",
+  "version": "0.0.1",
+  "description": "State-of-the-art watch party application with hybrid architecture",
+  "private": true,
+  "workspaces": [
+    "extension",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@parcel/packager-ts": "^2.9.3",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.0"
+  }
+}

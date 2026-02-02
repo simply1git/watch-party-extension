@@ -1,0 +1,19 @@
+{
+  "extends": "plasmo/templates/tsconfig.base.json",
+  "include": [
+    ".plasmo/index.d.ts",
+    "src"
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~*": [
+        "./src/*"
+      ],
+      "@watch-party/shared": [
+        "../shared/src"
+      ]
+    },
+    "sourceMap": false
+  }
+}
