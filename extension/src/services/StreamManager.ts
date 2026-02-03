@@ -2,8 +2,8 @@ import io, { Socket } from "socket.io-client";
 import { CONFIG } from "../config";
 
 interface StreamConfig {
-  onStreamFound: (stream: MediaStream) => void;
-  onStreamEnded: () => void;
+  onStreamFound: (stream: MediaStream, userId: string) => void;
+  onStreamEnded: (userId: string) => void;
   roomId: string;
   user: { nickname: string; avatar: string };
 }
@@ -15,13 +15,15 @@ export class StreamManager {
   private roomId: string;
   private user: { nickname: string; avatar: string };
   private isStreamer: boolean = false;
-  private onStreamFound: (stream: MediaStream) => void;
-  private onStreamEnded: () => void;
+  private onStreamFound: (stream: MediaStream, userId: string) => void;
+  private onStreamEnded: (userId: string) => void;
   public onChatMessage: ((msg: any) => void) | null = null;
   public onChatHistory: ((messages: any[]) => void) | null = null;
   public onReaction: ((data: { senderId: string; emoji: string }) => void) | null = null;
   public onBuzz: ((data: { senderId: string }) => void) | null = null;
   public onUserListUpdate: ((users: Array<{ nickname: string; avatar: string }>) => void) | null = null;
+  
+  private webcamStream: MediaStream | null = null;
 
   private config = {
     iceServers: [
@@ -68,6 +70,7 @@ export class StreamManager {
             peer.close();
             this.peers.delete(userId);
         }
+        this.onStreamEnded(userId);
     });
 
     this.socket.on("chat-message", (msg) => {
@@ -158,6 +161,51 @@ export class StreamManager {
     });
   }
 
+  public async toggleAudio(enabled: boolean) {
+    if (enabled && !this.webcamStream) {
+        await this.initWebcam();
+    }
+    if (this.webcamStream) {
+      this.webcamStream.getAudioTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+  }
+
+  public async toggleVideo(enabled: boolean) {
+    if (enabled && !this.webcamStream) {
+        await this.initWebcam();
+    }
+    if (this.webcamStream) {
+      this.webcamStream.getVideoTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+  }
+
+  private async initWebcam() {
+      try {
+          this.webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          
+          // Disable tracks initially if they weren't requested? 
+          // For simplicity, we enable them based on the toggle that called this.
+          // But wait, if I click "Audio", I get both but Video might be on?
+          // I should respect the current state logic. 
+          // Let's just default to enabled=false for the one not requested?
+          // The caller sets enabled=true immediately after.
+          // Let's set both to false initially.
+          this.webcamStream.getTracks().forEach(t => t.enabled = false);
+
+          this.peers.forEach(peer => {
+              this.webcamStream!.getTracks().forEach(track => {
+                  peer.addTrack(track, this.webcamStream!);
+              });
+          });
+      } catch (err) {
+          console.error("Error accessing webcam:", err);
+      }
+  }
+
   public stopStream() {
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
@@ -166,7 +214,7 @@ export class StreamManager {
     this.isStreamer = false;
     this.peers.forEach(peer => peer.close());
     this.peers.clear();
-    this.onStreamEnded();
+    this.onStreamEnded(this.socket.id || "local");
   }
 
   public destroy() {
@@ -191,6 +239,12 @@ export class StreamManager {
       });
     }
 
+    if (this.webcamStream) {
+        this.webcamStream.getTracks().forEach(track => {
+            peer.addTrack(track, this.webcamStream!);
+        });
+    }
+
     peer.onicecandidate = (event) => {
       if (event.candidate) {
         this.socket.emit("signal", {
@@ -201,8 +255,21 @@ export class StreamManager {
     };
 
     peer.ontrack = (event) => {
-      console.log("Received remote stream");
-      this.onStreamFound(event.streams[0]);
+      console.log("Received remote stream from", targetId);
+      this.onStreamFound(event.streams[0], targetId);
+    };
+
+    peer.onnegotiationneeded = () => {
+        if (initiator) {
+             peer.createOffer().then(offer => peer.setLocalDescription(offer))
+             .then(() => {
+                 this.socket.emit("signal", {
+                     target: targetId,
+                     signal: { sdp: peer.localDescription }
+                 });
+             })
+             .catch(err => console.error("Negotiation error:", err));
+        }
     };
 
     if (initiator) {

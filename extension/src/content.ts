@@ -16,6 +16,10 @@ const ICONS = {
   BUZZ: '<svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>',
   SYNC: '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>',
   LEAVE: '<svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>',
+  MIC_ON: '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>',
+  MIC_OFF: '<svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 2.76 2.24 5 5 5 .52 0 1.03-.06 1.5-.18L18.73 19l1.27-1.27L4.27 3zM12 19c-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>',
+  CAM_ON: '<svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
+  CAM_OFF: '<svg viewBox="0 0 24 24"><path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/></svg>',
   SEND: '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>',
   CLOSE: '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
 };
@@ -144,9 +148,11 @@ class WatchPartyManager {
   private sidePanel: HTMLDivElement | null = null;
   private isPanelOpen: boolean = false;
   private currentTab: 'chat' | 'people' = 'chat';
+  private isMicOn: boolean = false;
+  private isCamOn: boolean = false;
 
   constructor() {
-    this.injectStyles();
+    this.setupMessageListeners();
     this.setupMessageListeners();
   }
 
@@ -179,6 +185,28 @@ class WatchPartyManager {
         root.style.setProperty("--wp-primary", "#8ab4f8");
         break;
     }
+  }
+
+  private toggleMic() {
+      this.isMicOn = !this.isMicOn;
+      const btn = document.getElementById("wp-btn-mic");
+      if (btn) {
+          btn.innerHTML = `${this.isMicOn ? ICONS.MIC_ON : ICONS.MIC_OFF}<span class="wp-tooltip">${this.isMicOn ? 'Turn off microphone' : 'Turn on microphone'}</span>`;
+          btn.classList.toggle("danger", !this.isMicOn);
+          btn.classList.toggle("active", this.isMicOn);
+      }
+      this.streamManager?.toggleAudio(this.isMicOn);
+  }
+
+  private toggleCam() {
+      this.isCamOn = !this.isCamOn;
+      const btn = document.getElementById("wp-btn-cam");
+      if (btn) {
+          btn.innerHTML = `${this.isCamOn ? ICONS.CAM_ON : ICONS.CAM_OFF}<span class="wp-tooltip">${this.isCamOn ? 'Turn off camera' : 'Turn on camera'}</span>`;
+          btn.classList.toggle("danger", !this.isCamOn);
+          btn.classList.toggle("active", this.isCamOn);
+      }
+      this.streamManager?.toggleVideo(this.isCamOn);
   }
 
   private handleBuzz() {
@@ -273,14 +301,15 @@ class WatchPartyManager {
     this.streamManager = new StreamManager({
         roomId: this.roomId,
         user: this.user,
-        onStreamFound: (stream) => this.createVideoOverlay(stream),
-        onStreamEnded: () => this.removeVideoOverlay()
+        onStreamFound: (stream, userId) => this.addVideoStream(stream, userId),
+        onStreamEnded: (userId) => this.removeVideoStream(userId)
     });
 
     this.streamManager.onChatMessage = (msg) => this.addChatMessage(msg);
     this.streamManager.onChatHistory = (msgs) => msgs.forEach(msg => this.addChatMessage(msg));
     this.streamManager.onReaction = (data) => this.showFloatingReaction(data.emoji);
     this.streamManager.onBuzz = () => this.handleBuzz();
+    this.streamManager.onUserListUpdate = () => this.updatePeopleList();
   }
 
   private setupMessageListeners() {
@@ -319,57 +348,54 @@ class WatchPartyManager {
     });
   }
 
-  private createVideoOverlay(stream: MediaStream) {
-    this.removeVideoOverlay();
+  private addVideoStream(stream: MediaStream, userId: string) {
+    let container = document.getElementById("wp-video-grid");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "wp-video-grid";
+        container.className = "wp-video-grid";
+        document.body.appendChild(container);
+    }
 
-    const container = document.createElement("div");
-    container.id = "watch-party-stream";
-    Object.assign(container.style, {
-        position: "fixed",
-        top: "20px",
-        left: "20px",
-        width: "320px",
-        height: "180px",
-        zIndex: "2147483645",
-        background: "#202124",
-        border: "1px solid #3c4043",
-        borderRadius: "12px",
-        overflow: "hidden",
-        boxShadow: "0 10px 20px rgba(0,0,0,0.5)",
-        resize: "both",
-        transition: "all 0.3s ease"
-    });
+    // Use stream.id to allow multiple streams per user (e.g. screen + cam)
+    const elementId = `wp-video-${userId}-${stream.id}`;
+    const existing = document.getElementById(elementId);
+    if (existing) return;
 
+    const wrapper = document.createElement("div");
+    wrapper.id = elementId;
+    wrapper.className = "wp-video-wrapper";
+    
     const video = document.createElement("video");
     video.srcObject = stream;
     video.autoplay = true;
-    video.controls = true;
     video.playsInline = true;
-    Object.assign(video.style, {
-        width: "100%",
-        height: "100%",
-        objectFit: "cover"
-    });
+    // Mute local video to avoid feedback
+    if (userId === "local" || (this.user && this.streamManager?.connectedUsers.get(userId)?.nickname === this.user.nickname)) {
+        video.muted = true;
+    }
+    
+    // Get user info
+    const user = this.streamManager?.connectedUsers.get(userId);
+    const label = document.createElement("div");
+    label.className = "wp-video-label";
+    label.innerText = (user?.nickname || userId) + (stream.getVideoTracks().length === 0 ? " (Audio)" : "");
 
-    const closeBtn = document.createElement("button");
-    closeBtn.innerHTML = ICONS.CLOSE;
-    Object.assign(closeBtn.style, {
-        position: "absolute", top: "8px", right: "8px",
-        background: "rgba(0,0,0,0.6)", color: "white", border: "none",
-        borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer",
-        zIndex: "2", display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "4px"
-    });
-    closeBtn.onclick = () => container.remove();
-
-    container.appendChild(closeBtn);
-    container.appendChild(video);
-    document.body.appendChild(container);
+    wrapper.appendChild(video);
+    wrapper.appendChild(label);
+    container.appendChild(wrapper);
   }
 
-  private removeVideoOverlay() {
-      const el = document.getElementById("watch-party-stream");
-      if (el) el.remove();
+  private removeVideoStream(userId: string) {
+      // This might be tricky if we don't know the stream ID. 
+      // But usually user-left means remove ALL streams for that user.
+      const wrappers = document.querySelectorAll(`[id^='wp-video-${userId}']`);
+      wrappers.forEach(el => el.remove());
+      
+      const container = document.getElementById("wp-video-grid");
+      if (container && container.children.length === 0) {
+          container.remove();
+      }
   }
 
   // --- UI Components ---
@@ -382,13 +408,25 @@ class WatchPartyManager {
       bar.className = "wp-control-bar";
 
       const buttons = [
-          {
+            {
               icon: ICONS.SYNC,
               label: "Sync Mode",
               id: "wp-btn-sync",
               action: () => alert(`Current Mode: ${this.currentMode === 'sync' ? 'Native Sync' : 'Screen Share'}`)
-          },
-          {
+            },
+            {
+              icon: ICONS.MIC_OFF,
+              label: "Turn on microphone",
+              id: "wp-btn-mic",
+              action: () => this.toggleMic()
+            },
+            {
+              icon: ICONS.CAM_OFF,
+              label: "Turn on camera",
+              id: "wp-btn-cam",
+              action: () => this.toggleCam()
+            },
+            {
               icon: ICONS.BUZZ,
               label: "Buzz",
               id: "wp-btn-buzz",
@@ -673,6 +711,33 @@ class WatchPartyManager {
       if (!container) return;
 
       container.innerHTML = ""; // Clear
+
+      // Add Invite Button
+      const inviteBtn = document.createElement("button");
+      inviteBtn.className = "wp-participant-item";
+      inviteBtn.style.width = "100%";
+      inviteBtn.style.background = "rgba(138, 180, 248, 0.1)";
+      inviteBtn.style.border = "none";
+      inviteBtn.style.cursor = "pointer";
+      inviteBtn.style.justifyContent = "center";
+      inviteBtn.style.color = "#8ab4f8";
+      inviteBtn.style.marginBottom = "8px";
+      
+      const copyIcon = ICONS.COPY.replace('<svg', '<svg style="width:16px;height:16px;margin-right:8px;fill:currentColor"');
+      
+      inviteBtn.innerHTML = `
+        ${copyIcon}
+        <span style="font-weight: 500">Copy Room ID: ${this.roomId}</span>
+      `;
+      inviteBtn.onclick = () => {
+          if (this.roomId) {
+              navigator.clipboard.writeText(this.roomId);
+              const original = inviteBtn.innerHTML;
+              inviteBtn.innerHTML = `<span style="color: #81c995; font-weight: 500">Copied!</span>`;
+              setTimeout(() => inviteBtn.innerHTML = original, 2000);
+          }
+      };
+      container.appendChild(inviteBtn);
 
       // Add self
       this.addParticipant(this.user?.nickname || "Me", true);
