@@ -146,6 +146,9 @@ export class StreamManager {
           });
       });
 
+      // Show local preview
+      this.onStreamFound(this.screenStream, "local");
+
       // If we have connected users but no peers (e.g. we just joined and haven't established connections yet),
       // we should initiate connections.
       this.connectedUsers.forEach((_, userId) => {
@@ -237,6 +240,9 @@ export class StreamManager {
           // The caller sets enabled=true immediately after.
           // Let's set both to false initially.
           this.webcamStream.getTracks().forEach(t => t.enabled = false);
+
+          // Show local preview
+          this.onStreamFound(this.webcamStream, "local");
 
           this.peers.forEach(peer => {
               this.webcamStream!.getTracks().forEach(track => {

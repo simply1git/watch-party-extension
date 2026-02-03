@@ -366,77 +366,109 @@
   font-weight: 500;
 }
 
-/* Video Grid */
+/* Video Grid - Vertical Filmstrip Style */
 #wp-video-grid {
   position: fixed;
-  top: 20px;
-  right: 390px;
+  top: 80px; /* Below header/top controls */
+  right: 20px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column; /* Stack vertically */
+  gap: 12px;
   z-index: 2147483645;
   pointer-events: none;
-  max-width: 500px;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 150px);
   overflow-y: auto;
-  overflow-x: hidden;
-  justify-content: flex-end;
-  transition: right 0.3s;
-  padding-right: 4px; /* Space for scrollbar */
+  overflow-x: visible; /* Allow hover effects to overflow */
+  align-items: flex-end; /* Align to right */
+  transition: right 0.3s, transform 0.3s;
+  padding: 10px;
+}
+
+/* Shift left when side panel is open */
+body.wp-panel-open #wp-video-grid {
+    right: 390px;
 }
 
 /* Custom Scrollbar for video grid */
 #wp-video-grid::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 #wp-video-grid::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.2);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 .wp-video-wrapper {
   position: relative;
-  width: 200px;
-  height: 150px;
+  width: 180px; /* Slightly smaller for sidebar feel */
+  height: 100px; /* 16:9ish */
   background: #202124;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   pointer-events: auto;
   border: 1px solid #3c4043;
   animation: wp-fade-in-up 0.3s ease-out;
-  transition: all 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.wp-video-wrapper:hover {
+    transform: scale(1.05);
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    border-color: #8ab4f8;
 }
 
 /* Dynamic sizing for single video */
 #wp-video-grid:has(.wp-video-wrapper:only-child) .wp-video-wrapper {
-    width: 320px;
-    height: 240px;
+    width: 240px;
+    height: 135px;
 }
 
 .wp-video-wrapper video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+}
+
+/* Mirror local video */
+.wp-video-wrapper.local video {
+    transform: scaleX(-1);
+}
+
+/* Screen Share Styling */
+.wp-video-wrapper.screen-share {
+    width: 320px !important;
+    height: 180px !important;
+    border: 2px solid #8ab4f8;
+}
+
+.wp-video-wrapper.screen-share video {
+    object-fit: contain; /* Show full screen content */
+    background: #000;
+    transform: none !important; /* Never mirror screen share */
 }
 
 .wp-video-label {
   position: absolute;
-  bottom: 8px;
-  left: 8px;
+  bottom: 6px;
+  left: 6px;
   color: white;
-  font-size: 11px;
-  background: rgba(0,0,0,0.6);
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  background: rgba(0,0,0,0.7);
+  padding: 2px 8px;
+  border-radius: 12px;
   font-family: 'Google Sans', sans-serif;
-  max-width: 180px;
+  max-width: 160px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  backdrop-filter: blur(4px);
 }
 
 .wp-hand-icon {

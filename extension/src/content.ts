@@ -473,9 +473,25 @@ class WatchPartyManager {
     video.srcObject = stream;
     video.autoplay = true;
     video.playsInline = true;
+
+    // Check if this is a screen share stream (heuristic based on track label or settings)
+    const videoTrack = stream.getVideoTracks()[0];
+    const isScreenShare = videoTrack?.label.toLowerCase().includes("screen") || 
+                          videoTrack?.label.toLowerCase().includes("window") ||
+                          videoTrack?.getSettings().displaySurface !== undefined;
+
+    if (isScreenShare) {
+        wrapper.classList.add("screen-share");
+    }
+
     // Mute local video to avoid feedback
     if (userId === "local" || (this.user && this.streamManager?.connectedUsers.get(userId)?.nickname === this.user.nickname)) {
         video.muted = true;
+        
+        // Mirror local video ONLY if it's NOT a screen share
+        if (!isScreenShare) {
+            wrapper.classList.add("local");
+        }
     }
     
     // Get user info
@@ -605,6 +621,7 @@ class WatchPartyManager {
       // If panel is closed, open it to the requested tab
       if (!this.isPanelOpen) {
           this.sidePanel.classList.add("open");
+          document.body.classList.add("wp-panel-open"); // Shift video grid
           this.isPanelOpen = true;
           this.switchTab(tab);
       } 
@@ -613,6 +630,7 @@ class WatchPartyManager {
           // If clicking same tab, close it
           if (this.currentTab === tab) {
               this.sidePanel.classList.remove("open");
+              document.body.classList.remove("wp-panel-open"); // Reset video grid
               this.isPanelOpen = false;
               chatBtn?.classList.remove("active");
               peopleBtn?.classList.remove("active");
@@ -678,6 +696,7 @@ class WatchPartyManager {
       closeBtn.innerHTML = ICONS.CLOSE;
       closeBtn.onclick = () => {
           this.sidePanel?.classList.remove("open");
+          document.body.classList.remove("wp-panel-open");
           this.isPanelOpen = false;
           document.getElementById("wp-btn-chat")?.classList.remove("active");
           document.getElementById("wp-btn-people")?.classList.remove("active");
