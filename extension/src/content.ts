@@ -438,9 +438,9 @@ class WatchPartyManager {
         if (!this.streamManager && this.roomId && this.user) {
              this.initStreamManager();
         }
-        this.streamManager?.startStream();
+        this.streamManager?.startScreenShare();
       } else if (request.type === "STOP_STREAM") {
-        this.streamManager?.stopStream();
+        this.streamManager?.stopScreenShare();
       }
     });
   }
