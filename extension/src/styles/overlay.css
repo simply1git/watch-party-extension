@@ -377,8 +377,21 @@
   z-index: 2147483645;
   pointer-events: none;
   max-width: 500px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  overflow-x: hidden;
   justify-content: flex-end;
   transition: right 0.3s;
+  padding-right: 4px; /* Space for scrollbar */
+}
+
+/* Custom Scrollbar for video grid */
+#wp-video-grid::-webkit-scrollbar {
+  width: 6px;
+}
+#wp-video-grid::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 3px;
 }
 
 .wp-video-wrapper {
@@ -392,6 +405,13 @@
   pointer-events: auto;
   border: 1px solid #3c4043;
   animation: wp-fade-in-up 0.3s ease-out;
+  transition: all 0.3s ease;
+}
+
+/* Dynamic sizing for single video */
+#wp-video-grid:has(.wp-video-wrapper:only-child) .wp-video-wrapper {
+    width: 320px;
+    height: 240px;
 }
 
 .wp-video-wrapper video {
@@ -414,4 +434,27 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wp-hand-icon {
+    font-size: 16px;
+    animation: wp-shake 0.5s ease-in-out;
+}
+
+.wp-video-hand {
+    background: #8ab4f8;
+    color: #202124;
+    border-radius: 50%;
+    padding: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: wp-float-up 0.5s ease-out forwards; /* Changed animation to float up? No, keep it static or pulse */
+    animation: wp-shake 1s infinite;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }

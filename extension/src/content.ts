@@ -21,6 +21,8 @@ const ICONS = {
   MIC_OFF: '<svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 2.76 2.24 5 5 5 .52 0 1.03-.06 1.5-.18L18.73 19l1.27-1.27L4.27 3zM12 19c-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>',
   CAM_ON: '<svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
   CAM_OFF: '<svg viewBox="0 0 24 24"><path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/></svg>',
+  SCREEN: '<svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.11-.9-2-2-2H4c-1.11 0-2 .89-2 2v10c0 1.1.89 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>',
+  HAND: '<svg viewBox="0 0 24 24"><path d="M23 11l-3.05-6.68C19.56 3.42 18.72 3 17.84 3c-1.19 0-2.3.72-2.74 1.79l-1.1 2.68V4c0-1.38-1.12-2.5-2.5-2.5S9 2.62 9 4v5.5l-1.34-.34c-.26-.06-.52-.08-.78-.08-1.09 0-2.08.64-2.53 1.62l-2.04 4.54c-.16.36-.26.75-.26 1.16V20c0 2.21 1.79 4 4 4h9.5c1.93 0 3.68-1.42 3.96-3.32l1.24-8.68c.09-.64-.4-1.17-1.05-1.09-.32.04-.61.2-.78.47L17 14h-1l1.83-4.08 1.17-2.6.48-1.07c.18-.41.58-.68 1.03-.68.27 0 .52.1.72.27L23 11z"/></svg>',
   SEND: '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>',
   CLOSE: '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
 };
@@ -151,6 +153,8 @@ class WatchPartyManager {
   private currentTab: 'chat' | 'people' = 'chat';
   private isMicOn: boolean = false;
   private isCamOn: boolean = false;
+  private isHandRaised: boolean = false;
+  private isScreenSharing: boolean = false;
 
   constructor() {
     this.setupMessageListeners();
@@ -214,6 +218,82 @@ class WatchPartyManager {
           btn.classList.toggle("active", this.isCamOn);
       }
       this.streamManager?.toggleVideo(this.isCamOn);
+  }
+
+  private toggleHand() {
+      this.isHandRaised = !this.isHandRaised;
+      const btn = document.getElementById("wp-btn-hand");
+      if (btn) {
+          btn.classList.toggle("active", this.isHandRaised);
+          // Optional: Add some visual indicator
+      }
+      this.streamManager?.toggleHand(this.isHandRaised);
+      // Update local UI immediately
+      if (this.user) {
+          this.updateParticipantHand(this.user.nickname, this.isHandRaised);
+      }
+  }
+
+  private async toggleScreenShare() {
+      if (this.isScreenSharing) {
+          this.streamManager?.stopScreenShare();
+          this.isScreenSharing = false;
+      } else {
+          await this.streamManager?.startScreenShare();
+          this.isScreenSharing = true;
+      }
+      
+      const btn = document.getElementById("wp-btn-screen");
+      if (btn) {
+          btn.classList.toggle("active", this.isScreenSharing);
+          btn.innerHTML = `${ICONS.SCREEN}<span class="wp-tooltip">${this.isScreenSharing ? 'Stop presenting' : 'Present now'}</span>`;
+      }
+  }
+
+  private updateParticipantHand(userName: string, isRaised: boolean) {
+      // Find participant item and add/remove hand icon
+      const items = document.querySelectorAll(".wp-participant-item");
+      items.forEach(item => {
+          if (item.querySelector(".wp-participant-name")?.textContent?.includes(userName)) {
+              const existingHand = item.querySelector(".wp-hand-icon");
+              if (isRaised) {
+                  if (!existingHand) {
+                      const hand = document.createElement("div");
+                      hand.className = "wp-hand-icon";
+                      hand.innerHTML = "✋";
+                      hand.style.marginLeft = "auto";
+                      item.appendChild(hand);
+                  }
+              } else {
+                  existingHand?.remove();
+              }
+          }
+      });
+
+      // Also update video grid if applicable
+      // This is harder because video grid uses IDs/streamIDs. 
+      // But we can try to find by label.
+      const videoLabels = document.querySelectorAll(".wp-video-label");
+      videoLabels.forEach(label => {
+          if (label.textContent?.includes(userName)) {
+              const wrapper = label.closest(".wp-video-wrapper");
+              const existingHand = wrapper?.querySelector(".wp-video-hand");
+              if (isRaised) {
+                  if (!existingHand && wrapper) {
+                      const hand = document.createElement("div");
+                      hand.className = "wp-video-hand";
+                      hand.innerHTML = "✋";
+                      hand.style.position = "absolute";
+                      hand.style.top = "8px";
+                      hand.style.right = "8px";
+                      hand.style.fontSize = "24px";
+                      wrapper.appendChild(hand);
+                  }
+              } else {
+                  existingHand?.remove();
+              }
+          }
+      });
   }
 
   private handleBuzz() {
@@ -316,6 +396,15 @@ class WatchPartyManager {
     this.streamManager.onChatHistory = (msgs) => msgs.forEach(msg => this.addChatMessage(msg));
     this.streamManager.onReaction = (data) => this.showFloatingReaction(data.emoji);
     this.streamManager.onBuzz = () => this.handleBuzz();
+    this.streamManager.onHandUpdate = (data) => {
+        const user = this.streamManager?.connectedUsers.get(data.userId);
+        if (user) {
+            this.updateParticipantHand(user.nickname, data.isRaised);
+            if (data.isRaised) {
+                this.playSound('message'); // Or a subtle ping
+            }
+        }
+    };
     this.streamManager.onUserListUpdate = () => this.updatePeopleList();
   }
 
@@ -433,6 +522,18 @@ class WatchPartyManager {
               label: "Turn on camera",
               id: "wp-btn-cam",
               action: () => this.toggleCam()
+            },
+            {
+              icon: ICONS.SCREEN,
+              label: "Present now",
+              id: "wp-btn-screen",
+              action: () => this.toggleScreenShare()
+            },
+            {
+              icon: ICONS.HAND,
+              label: "Raise hand",
+              id: "wp-btn-hand",
+              action: () => this.toggleHand()
             },
             {
               icon: ICONS.BUZZ,

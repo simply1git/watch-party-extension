@@ -11,19 +11,19 @@ interface StreamConfig {
 export class StreamManager {
   private socket: Socket;
   private peers: Map<string, RTCPeerConnection> = new Map();
-  private localStream: MediaStream | null = null;
   private roomId: string;
   private user: { nickname: string; avatar: string };
-  private isStreamer: boolean = false;
   private onStreamFound: (stream: MediaStream, userId: string) => void;
   private onStreamEnded: (userId: string) => void;
   public onChatMessage: ((msg: any) => void) | null = null;
   public onChatHistory: ((messages: any[]) => void) | null = null;
   public onReaction: ((data: { senderId: string; emoji: string }) => void) | null = null;
   public onBuzz: ((data: { senderId: string }) => void) | null = null;
+  public onHandUpdate: ((data: { userId: string; isRaised: boolean }) => void) | null = null;
   public onUserListUpdate: ((users: Array<{ nickname: string; avatar: string }>) => void) | null = null;
   
   private webcamStream: MediaStream | null = null;
+  private screenStream: MediaStream | null = null;
 
   private config = {
     iceServers: [
@@ -97,6 +97,12 @@ export class StreamManager {
       }
     });
 
+    this.socket.on("hand-update", (data) => {
+      if (this.onHandUpdate) {
+        this.onHandUpdate(data);
+      }
+    });
+
     this.socket.on("signal", async ({ sender, signal }) => {
       const peer = this.peers.get(sender) || this.createPeerConnection(sender, false);
       
@@ -116,9 +122,9 @@ export class StreamManager {
     });
   }
 
-  public async startStream() {
+  public async startScreenShare() {
     try {
-      this.localStream = await navigator.mediaDevices.getDisplayMedia({
+      this.screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           width: { max: 1280 },
           height: { max: 720 },
@@ -127,17 +133,49 @@ export class StreamManager {
         audio: true
       });
 
-      this.isStreamer = true;
-      this.localStream.getVideoTracks()[0].onended = () => this.stopStream();
+      this.screenStream.getVideoTracks()[0].onended = () => this.stopScreenShare();
 
-      // Initiate connections to all existing users
+      // Add tracks to existing peers
+      this.peers.forEach(peer => {
+          this.screenStream!.getTracks().forEach(track => {
+              peer.addTrack(track, this.screenStream!);
+          });
+      });
+
+      // If we have connected users but no peers (e.g. we just joined and haven't established connections yet),
+      // we should initiate connections.
       this.connectedUsers.forEach((_, userId) => {
-        this.createPeerConnection(userId, true);
+          if (!this.peers.has(userId)) {
+              this.createPeerConnection(userId, true);
+          }
       });
       
     } catch (err) {
-      console.error("Error starting stream:", err);
+      console.error("Error starting screen share:", err);
     }
+  }
+
+  public stopScreenShare() {
+    if (this.screenStream) {
+      this.screenStream.getTracks().forEach(track => track.stop());
+      
+      // Remove tracks from peers
+      this.peers.forEach(peer => {
+          peer.getSenders().forEach(sender => {
+              if (sender.track && this.screenStream!.getTracks().find(t => t.id === sender.track!.id)) {
+                  peer.removeTrack(sender);
+              }
+          });
+      });
+      
+      this.screenStream = null;
+    }
+    // We do NOT close peers here because we might still have webcam/chat
+    this.onStreamEnded(this.socket.id || "local"); // This might need refinement: "local-screen" vs "local-webcam"
+  }
+
+  public toggleHand(isRaised: boolean) {
+      this.socket.emit("hand-toggle", { roomId: this.roomId, isRaised });
   }
 
   public sendChatMessage(message: string) {
@@ -206,19 +244,11 @@ export class StreamManager {
       }
   }
 
-  public stopStream() {
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(track => track.stop());
-      this.localStream = null;
-    }
-    this.isStreamer = false;
-    this.peers.forEach(peer => peer.close());
-    this.peers.clear();
-    this.onStreamEnded(this.socket.id || "local");
-  }
-
   public destroy() {
-    this.stopStream();
+    this.stopScreenShare();
+    if (this.webcamStream) {
+        this.webcamStream.getTracks().forEach(t => t.stop());
+    }
     this.connectedUsers.clear();
     this.socket.disconnect();
   }
@@ -233,9 +263,9 @@ export class StreamManager {
     const peer = new RTCPeerConnection(this.config);
     this.peers.set(targetId, peer);
 
-    if (this.isStreamer && this.localStream) {
-      this.localStream.getTracks().forEach(track => {
-        peer.addTrack(track, this.localStream!);
+    if (this.screenStream) {
+      this.screenStream.getTracks().forEach(track => {
+        peer.addTrack(track, this.screenStream!);
       });
     }
 
