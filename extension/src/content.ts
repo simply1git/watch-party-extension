@@ -374,7 +374,42 @@ class WatchPartyManager {
   }
 
   private createChatOverlay() {
-      if (this.chatContainer) return;
+      if (this.chatContainer) {
+          this.chatContainer.style.display = "flex"; // Re-show if hidden
+          return;
+      }
+
+      // Floating Toggle Button (Bubble)
+      const toggleBtn = document.createElement("button");
+      toggleBtn.id = "wp-chat-toggle";
+      toggleBtn.innerHTML = "💬";
+      Object.assign(toggleBtn.style, {
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          width: "50px",
+          height: "50px",
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+          color: "white",
+          border: "none",
+          fontSize: "24px",
+          cursor: "pointer",
+          zIndex: "2147483646",
+          boxShadow: "0 4px 12px rgba(99, 102, 241, 0.4)",
+          display: "none", // Hidden initially
+          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+      });
+      toggleBtn.onmouseenter = () => toggleBtn.style.transform = "scale(1.1)";
+      toggleBtn.onmouseleave = () => toggleBtn.style.transform = "scale(1)";
+      toggleBtn.onclick = () => {
+          if (this.chatContainer) {
+              this.chatContainer.style.display = "flex";
+              this.chatContainer.style.transform = "translateX(0)";
+              toggleBtn.style.display = "none";
+          }
+      };
+      document.body.appendChild(toggleBtn);
 
       const container = document.createElement("div");
       this.chatContainer = container;
@@ -382,12 +417,14 @@ class WatchPartyManager {
           position: "fixed",
           top: "0",
           right: "0",
-          width: "300px",
+          width: "320px",
           height: "100vh",
           zIndex: "2147483647",
           display: "flex",
           flexDirection: "column",
-          fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          fontFamily: "'Inter', system-ui, sans-serif",
+          transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: "-5px 0 25px rgba(0,0,0,0.3)"
       });
       container.classList.add("wp-glass");
 
@@ -396,26 +433,35 @@ class WatchPartyManager {
       Object.assign(header.style, {
           padding: "16px",
           borderBottom: "1px solid rgba(255,255,255,0.1)",
-          background: "transparent",
+          background: "rgba(15, 23, 42, 0.8)",
+          backdropFilter: "blur(12px)",
           color: "white",
-          fontWeight: "bold",
+          fontWeight: "600",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center"
+          alignItems: "center",
+          fontSize: "14px",
+          letterSpacing: "0.5px"
       });
-      header.innerHTML = `<span>💬 Party Chat</span>`;
+      header.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><span>💬</span> Party Chat</div>`;
       
-      const closeBtn = document.createElement("button");
-      closeBtn.innerText = "×";
-      Object.assign(closeBtn.style, {
+      const controlsDiv = document.createElement("div");
+      controlsDiv.style.display = "flex";
+      controlsDiv.style.gap = "8px";
+
+      const minimizeBtn = document.createElement("button");
+      minimizeBtn.innerHTML = "−";
+      Object.assign(minimizeBtn.style, {
           background: "none", border: "none", color: "#94a3b8", 
-          fontSize: "24px", cursor: "pointer"
+          fontSize: "18px", cursor: "pointer", padding: "4px"
       });
-      closeBtn.onclick = () => {
+      minimizeBtn.onclick = () => {
           container.style.display = "none";
-          // Add floating toggle button? For now just hide.
+          toggleBtn.style.display = "flex";
       };
-      header.appendChild(closeBtn);
+
+      controlsDiv.appendChild(minimizeBtn);
+      header.appendChild(controlsDiv);
 
       // Messages Area
       const messagesArea = document.createElement("div");

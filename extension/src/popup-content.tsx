@@ -254,6 +254,8 @@ function IndexPopup() {
   const [avatar, setAvatar] = useState("👤")
   const [status, setStatus] = useState<"connected" | "disconnected">("disconnected")
   const [currentRoom, setCurrentRoom] = useState<string | null>(null)
+  const [isRestricted, setIsRestricted] = useState(false)
+  const [recentRooms, setRecentRooms] = useState<string[]>([])
 
   // Socket connection status check
   useEffect(() => {
@@ -291,6 +293,13 @@ function IndexPopup() {
       if (tabs[0]?.url) {
         const url = new URL(tabs[0].url)
         const hostname = url.hostname
+        
+        if (url.protocol === "chrome:" || url.protocol === "edge:" || url.protocol === "about:") {
+            setIsRestricted(true)
+        } else {
+            setIsRestricted(false)
+        }
+
         if (hostname.includes("youtube.com") || hostname.includes("netflix.com") || hostname.includes("vimeo.com")) {
             setMode("sync")
             setSiteName(hostname.replace("www.", ""))
@@ -301,15 +310,22 @@ function IndexPopup() {
       }
     })
 
-    chrome.storage.sync.get(["nickname", "avatar", "theme"], (result) => {
+    chrome.storage.sync.get(["nickname", "avatar", "theme", "recentRooms"], (result) => {
       if (result.nickname) setNickname(result.nickname)
       if (result.avatar) setAvatar(result.avatar)
       if (result.theme) setTheme(result.theme)
+      if (result.recentRooms) setRecentRooms(result.recentRooms)
     })
   }, [])
 
   const saveProfile = () => {
     chrome.storage.sync.set({ nickname, avatar, theme })
+  }
+
+  const addToRecentRooms = (room: string) => {
+      const updated = [room, ...recentRooms.filter(r => r !== room)].slice(0, 5)
+      setRecentRooms(updated)
+      chrome.storage.sync.set({ recentRooms: updated })
   }
 
   const handleAction = () => {
@@ -321,16 +337,16 @@ function IndexPopup() {
     
     if (!roomToJoin) return
     setCurrentRoom(roomToJoin)
+    addToRecentRooms(roomToJoin)
 
     // Notify content script to join the room
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs[0]?.id) {
         // Check for restricted URLs
          const currentUrl = tabs[0].url || "";
-         console.log("Current Tab URL:", currentUrl);
-
+         
          if (currentUrl.startsWith("chrome://") || currentUrl.startsWith("edge://") || currentUrl.startsWith("about:")) {
-             alert(`Extension cannot run on this restricted page (${currentUrl}).\nPlease navigate to a video site (e.g. YouTube) and refresh.`);
+             setIsRestricted(true); // Switch to restricted view instead of alert
              setCurrentRoom(null);
              return;
          }
@@ -386,8 +402,30 @@ function IndexPopup() {
         </div>
       </header>
 
-      {/* Main Content */}
-      {!currentRoom ? (
+      {/* Restricted Mode View */}
+      {isRestricted ? (
+        <div className="card" style={{ textAlign: "center", alignItems: "center", gap: "20px" }}>
+            <div style={{ fontSize: "48px" }}>🛑</div>
+            <div>
+                <h3 style={{ margin: "0 0 8px 0", color: "#f87171" }}>Restricted Page</h3>
+                <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8", lineHeight: "1.5" }}>
+                    Extensions cannot run on browser system pages (like New Tab or Settings).
+                </p>
+            </div>
+            
+            <button 
+                className="btn-primary" 
+                style={{ width: "100%", background: "#ef4444" }}
+                onClick={() => window.open("https://www.youtube.com", "_blank")}
+            >
+                Open YouTube
+            </button>
+            
+            <div style={{ fontSize: "11px", color: "#64748b" }}>
+                Tip: Navigate to a video site and click the extension again.
+            </div>
+        </div>
+      ) : !currentRoom ? (
         <>
           {/* Smart Mode Indicator */}
           <div style={{ 
@@ -495,6 +533,33 @@ function IndexPopup() {
               Join Room
             </button>
           </div>
+
+          {/* Recent Rooms */}
+          {activeTab === "join" && recentRooms.length > 0 && (
+              <div style={{ marginBottom: "16px" }}>
+                  <label className="label" style={{ marginBottom: "8px", display: "block" }}>Recent Rooms</label>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {recentRooms.map(room => (
+                          <button 
+                            key={room}
+                            onClick={() => setRoomId(room)}
+                            style={{
+                                background: "rgba(99, 102, 241, 0.1)",
+                                border: "1px solid rgba(99, 102, 241, 0.2)",
+                                color: "#818cf8",
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                fontSize: "11px",
+                                cursor: "pointer",
+                                transition: "all 0.2s"
+                            }}
+                          >
+                              {room}
+                          </button>
+                      ))}
+                  </div>
+              </div>
+          )}
 
           <div className="card">
             <div className="input-group">
