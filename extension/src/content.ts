@@ -389,7 +389,7 @@ class WatchPartyManager {
         roomId: this.roomId,
         user: this.user,
         onStreamFound: (stream, userId) => this.addVideoStream(stream, userId),
-        onStreamEnded: (userId) => this.removeVideoStream(userId)
+        onStreamEnded: (userId, streamId) => this.removeVideoStream(userId, streamId)
     });
 
     this.streamManager.onChatMessage = (msg) => this.addChatMessage(msg);
@@ -483,11 +483,15 @@ class WatchPartyManager {
     container.appendChild(wrapper);
   }
 
-  private removeVideoStream(userId: string) {
-      // This might be tricky if we don't know the stream ID. 
-      // But usually user-left means remove ALL streams for that user.
-      const wrappers = document.querySelectorAll(`[id^='wp-video-${userId}']`);
-      wrappers.forEach(el => el.remove());
+  private removeVideoStream(userId: string, streamId?: string) {
+      if (streamId) {
+          const el = document.getElementById(`wp-video-${userId}-${streamId}`);
+          if (el) el.remove();
+      } else {
+          // Remove all streams for this user
+          const wrappers = document.querySelectorAll(`[id^='wp-video-${userId}']`);
+          wrappers.forEach(el => el.remove());
+      }
       
       const container = document.getElementById("wp-video-grid");
       if (container && container.children.length === 0) {

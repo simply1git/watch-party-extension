@@ -3,7 +3,7 @@ import { CONFIG } from "../config";
 
 interface StreamConfig {
   onStreamFound: (stream: MediaStream, userId: string) => void;
-  onStreamEnded: (userId: string) => void;
+  onStreamEnded: (userId: string, streamId?: string) => void;
   roomId: string;
   user: { nickname: string; avatar: string };
 }
@@ -14,7 +14,7 @@ export class StreamManager {
   private roomId: string;
   private user: { nickname: string; avatar: string };
   private onStreamFound: (stream: MediaStream, userId: string) => void;
-  private onStreamEnded: (userId: string) => void;
+  public onStreamEnded: (userId: string, streamId?: string) => void;
   public onChatMessage: ((msg: any) => void) | null = null;
   public onChatHistory: ((messages: any[]) => void) | null = null;
   public onReaction: ((data: { senderId: string; emoji: string }) => void) | null = null;
@@ -53,18 +53,21 @@ export class StreamManager {
     this.socket.on("room-users", (users: Array<{ userId: string; user: any }>) => {
       console.log("Existing users:", users);
       users.forEach(u => this.connectedUsers.set(u.userId, u.user));
+      this.notifyUserListUpdate();
     });
 
     this.socket.on("user-joined", ({ userId, user }) => {
       console.log("User joined:", userId, user);
       this.connectedUsers.set(userId, user);
-      if (this.isStreamer && this.localStream) {
+      this.notifyUserListUpdate();
+      if (this.webcamStream || this.screenStream) {
         this.createPeerConnection(userId, true);
       }
     });
     
     this.socket.on("user-left", ({ userId }) => {
         this.connectedUsers.delete(userId);
+        this.notifyUserListUpdate();
         const peer = this.peers.get(userId);
         if (peer) {
             peer.close();
@@ -157,6 +160,7 @@ export class StreamManager {
 
   public stopScreenShare() {
     if (this.screenStream) {
+      const streamId = this.screenStream.id;
       this.screenStream.getTracks().forEach(track => track.stop());
       
       // Remove tracks from peers
@@ -169,9 +173,8 @@ export class StreamManager {
       });
       
       this.screenStream = null;
+      this.onStreamEnded(this.socket.id || "local", streamId);
     }
-    // We do NOT close peers here because we might still have webcam/chat
-    this.onStreamEnded(this.socket.id || "local"); // This might need refinement: "local-screen" vs "local-webcam"
   }
 
   public toggleHand(isRaised: boolean) {
@@ -207,7 +210,7 @@ export class StreamManager {
       this.webcamStream.getAudioTracks().forEach(track => {
         track.enabled = enabled;
       });
-    }
+      }
   }
 
   public async toggleVideo(enabled: boolean) {
@@ -287,19 +290,23 @@ export class StreamManager {
     peer.ontrack = (event) => {
       console.log("Received remote stream from", targetId);
       this.onStreamFound(event.streams[0], targetId);
+      
+      event.streams[0].onremovetrack = () => {
+         if (event.streams[0].getTracks().length === 0) {
+             this.onStreamEnded(targetId, event.streams[0].id);
+         }
+      };
     };
 
     peer.onnegotiationneeded = () => {
-        if (initiator) {
-             peer.createOffer().then(offer => peer.setLocalDescription(offer))
-             .then(() => {
-                 this.socket.emit("signal", {
-                     target: targetId,
-                     signal: { sdp: peer.localDescription }
-                 });
-             })
-             .catch(err => console.error("Negotiation error:", err));
-        }
+         peer.createOffer().then(offer => peer.setLocalDescription(offer))
+         .then(() => {
+             this.socket.emit("signal", {
+                 target: targetId,
+                 signal: { sdp: peer.localDescription }
+             });
+         })
+         .catch(err => console.error("Negotiation error:", err));
     };
 
     if (initiator) {
