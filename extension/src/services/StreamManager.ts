@@ -21,6 +21,7 @@ export class StreamManager {
   public onChatHistory: ((messages: any[]) => void) | null = null;
   public onReaction: ((data: { senderId: string; emoji: string }) => void) | null = null;
   public onBuzz: ((data: { senderId: string }) => void) | null = null;
+  public onUserListUpdate: ((users: Array<{ nickname: string; avatar: string }>) => void) | null = null;
 
   private config = {
     iceServers: [
@@ -172,6 +173,12 @@ export class StreamManager {
     this.stopStream();
     this.connectedUsers.clear();
     this.socket.disconnect();
+  }
+
+  private notifyUserListUpdate() {
+    if (this.onUserListUpdate) {
+        this.onUserListUpdate(Array.from(this.connectedUsers.values()));
+    }
   }
 
   private createPeerConnection(targetId: string, initiator: boolean): RTCPeerConnection {
