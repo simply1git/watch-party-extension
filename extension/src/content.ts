@@ -158,15 +158,21 @@ class WatchPartyManager {
   }
 
   private injectStyles() {
+    if (document.getElementById("wp-styles")) return;
+    
     const style = document.createElement("style");
+    style.id = "wp-styles";
     style.textContent = cssText;
     document.head.appendChild(style);
     
     // Inject font
-    const fontLink = document.createElement("link");
-    fontLink.href = "https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap";
-    fontLink.rel = "stylesheet";
-    document.head.appendChild(fontLink);
+    if (!document.getElementById("wp-font")) {
+        const fontLink = document.createElement("link");
+        fontLink.id = "wp-font";
+        fontLink.href = "https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap";
+        fontLink.rel = "stylesheet";
+        document.head.appendChild(fontLink);
+    }
   }
 
   private applyTheme(theme: string) {
@@ -320,6 +326,7 @@ class WatchPartyManager {
         this.user = request.user;
         this.currentMode = request.mode || "stream"; 
 
+        this.injectStyles();
         this.applyTheme(request.theme || "default");
         
         this.initStreamManager();
