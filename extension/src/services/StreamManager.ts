@@ -52,6 +52,7 @@ export class StreamManager {
 
     this.socket.on("room-users", (users: Array<{ userId: string; user: any }>) => {
       console.log("Existing users:", users);
+      this.connectedUsers.clear(); // Clear existing to prevent duplicates
       users.forEach(u => this.connectedUsers.set(u.userId, u.user));
       this.notifyUserListUpdate();
     });

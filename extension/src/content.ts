@@ -384,6 +384,12 @@ class WatchPartyManager {
     if (this.streamManager) {
         this.streamManager.destroy();
     }
+    
+    // Clear any existing video grid to prevent duplicates/ghosts
+    const container = document.getElementById("wp-video-grid");
+    if (container) {
+        container.remove();
+    }
 
     this.streamManager = new StreamManager({
         roomId: this.roomId,

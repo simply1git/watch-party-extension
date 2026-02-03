@@ -43,6 +43,19 @@ export class RoomManager {
       this.rooms.set(roomId, room);
     }
 
+    // Check for existing user with same nickname and remove them (ghost handling)
+    for (const [existingSocketId, existingUser] of room.users.entries()) {
+        if (existingUser.nickname === userData.nickname) {
+            console.log(`[RoomManager] Removing duplicate user/ghost: ${userData.nickname} (${existingSocketId})`);
+            room.users.delete(existingSocketId);
+            // We should ideally notify others that this specific socket left, 
+            // but the caller of joinRoom will emit 'user-joined' for the new socket.
+            // The old socket ID will just disappear from the user list.
+            // If the old socket is still connected, it will get a "disconnect" event eventually,
+            // but for now, we remove it from the room state.
+        }
+    }
+
     const user: User = {
       id: socketId,
       nickname: userData.nickname,
@@ -74,7 +87,11 @@ export class RoomManager {
   public getUsers(roomId: string): User[] {
     const room = this.rooms.get(roomId);
     if (!room) return [];
-    return Array.from(room.users.values());
+    
+    // Deduplicate by nickname just in case (prefer newest)
+    const uniqueUsers = new Map<string, User>();
+    room.users.forEach(u => uniqueUsers.set(u.nickname, u));
+    return Array.from(uniqueUsers.values());
   }
 
   public addMessage(roomId: string, message: ChatMessage) {
